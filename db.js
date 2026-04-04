@@ -1,4 +1,4 @@
-db.js --  // db.js
+// db.js
 const mysql = require("mysql2");
 
 // Create a connection pool
