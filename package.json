@@ -1,4 +1,4 @@
-package.json -   {
+{
   "name": "user-service",
   "version": "1.0.0",
   "description": "User Service for ECS",
