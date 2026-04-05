@@ -46,7 +46,6 @@ pipeline {
                     sh "docker push ${ECR_URI}:${IMAGE_TAG}"
 
                     // 3. Update Task Definition with New Image
-                    // Note: \$IMAGE is escaped so Jenkins doesn't try to interpret it as a Groovy variable
                     sh """
                     aws ecs describe-task-definition --task-definition ${TASK_DEF_NAME} --query taskDefinition > task-def.json
                     
@@ -58,4 +57,17 @@ pipeline {
 
                     // 4. Update ECS Service to use the new Revision
                     sh """
-                    aws ecs update-service
+                    aws ecs update-service --cluster ${ECS_CLUSTER} --service ${ECS_SERVICE} --task-definition ${TASK_DEF_NAME} --region ${AWS_REGION}
+                    aws ecs wait services-stable --cluster ${ECS_CLUSTER} --services ${ECS_SERVICE}
+                    """
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            sh "docker image prune -f"
+        }
+    }
+}
