@@ -28,9 +28,9 @@ pipeline {
             }
         }
 
+        // EVERYTHING AWS MUST BE INSIDE THIS ONE STAGE
         stage('Push and Deploy to AWS') {
             steps {
-                // Ensure 'aws_credentials' is the ID you created in Jenkins
                 withCredentials([[
                     $class: 'AmazonWebServicesCredentialsBinding', 
                     credentialsId: 'aws_credentials', 
@@ -38,14 +38,14 @@ pipeline {
                     secretKeyVariable: 'AWS_SECRET_ACCESS_KEY'
                 ]]) {
                     sh """
-                    # 1. Login to ECR
+                    # 1. Login
                     aws ecr get-login-password --region ${AWS_REGION} | \
                     docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
 
-                    # 2. Push to ECR
+                    # 2. Push
                     docker push ${ECR_URI}:${IMAGE_TAG}
 
-                    # 3. Register New Task Definition
+                    # 3. Register Task Definition
                     aws ecs describe-task-definition --task-definition ${TASK_DEF_NAME} --query taskDefinition > task-def.json
                     
                     cat task-def.json | jq --arg IMAGE "${ECR_URI}:${IMAGE_TAG}" \
@@ -53,13 +53,8 @@ pipeline {
                     
                     aws ecs register-task-definition --cli-input-json file://new-task-def.json
 
-                    # 4. Update Service Deployment
-                    aws ecs update-service \
-                        --cluster ${ECS_CLUSTER} \
-                        --service ${ECS_SERVICE} \
-                        --task-definition ${TASK_DEF_NAME} \
-                        --force-new-deployment \
-                        --region ${AWS_REGION}
+                    # 4. Update Service
+                    aws ecs update-service --cluster ${ECS_CLUSTER} --service ${ECS_SERVICE} --task-definition ${TASK_DEF_NAME} --force-new-deployment --region ${AWS_REGION}
                     """
                 }
             }
