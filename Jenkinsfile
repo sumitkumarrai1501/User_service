@@ -3,11 +3,10 @@ pipeline {
 
     environment {
         AWS_REGION     = "us-east-1"
-        ECR_REPO       = "user-service"
-        ECS_CLUSTER    = "Dev_cluster_new"
-        ECS_SERVICE    = "user-service-new-service-egsptfmt"
-        // Ensure this matches your actual Task Definition name in AWS Console
-        TASK_DEF_NAME  = "user-service" 
+        ECR_REPO       = "order-service"
+        ECS_CLUSTER    = "arun-dev-cluster"
+        ECS_SERVICE    = "arun-order-service-service"
+        TASK_DEF_NAME  = "arun-order-service" 
         IMAGE_TAG      = "${BUILD_NUMBER}"
         AWS_ACCOUNT_ID = "065109818578"
         ECR_URI        = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}"
@@ -25,14 +24,13 @@ pipeline {
                 sh """
                 docker build -t ${ECR_REPO}:${IMAGE_TAG} .
                 docker tag ${ECR_REPO}:${IMAGE_TAG} ${ECR_URI}:${IMAGE_TAG}
-                docker tag ${ECR_REPO}:${IMAGE_TAG} ${ECR_URI}:latest
                 """
             }
         }
 
         stage('Push and Deploy to AWS') {
             steps {
-                // 'aws_credentials' must match the ID in Jenkins Credentials Manager
+                // Ensure 'aws_credentials' is the ID you created in Jenkins
                 withCredentials([[
                     $class: 'AmazonWebServicesCredentialsBinding', 
                     credentialsId: 'aws_credentials', 
@@ -46,9 +44,8 @@ pipeline {
 
                     # 2. Push to ECR
                     docker push ${ECR_URI}:${IMAGE_TAG}
-                    docker push ${ECR_URI}:latest
 
-                    # 3. Register New Task Definition (Updates the image pointer)
+                    # 3. Register New Task Definition
                     aws ecs describe-task-definition --task-definition ${TASK_DEF_NAME} --query taskDefinition > task-def.json
                     
                     cat task-def.json | jq --arg IMAGE "${ECR_URI}:${IMAGE_TAG}" \
@@ -56,7 +53,7 @@ pipeline {
                     
                     aws ecs register-task-definition --cli-input-json file://new-task-def.json
 
-                    # 4. Deploy to ECS
+                    # 4. Update Service Deployment
                     aws ecs update-service \
                         --cluster ${ECS_CLUSTER} \
                         --service ${ECS_SERVICE} \
@@ -71,7 +68,6 @@ pipeline {
 
     post {
         always {
-            // Cleans up old build images to prevent disk space issues on the Jenkins node
             sh "docker image prune -f"
         }
     }
