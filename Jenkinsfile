@@ -4,9 +4,9 @@ pipeline {
     environment {
         AWS_REGION = "us-east-1"
         ECR_REPO = "order-service"
-        // ECS_CLUSTER = "arun-dev-cluster"
-        // ECS_SERVICE = "arun-order-service-service"
-        // TASK_DEF_NAME = "arun-order-service"
+        ECS_CLUSTER = "arun-dev-cluster"       // <--- Uncommented
+        ECS_SERVICE = "arun-order-service-service" // <--- Uncommented
+        TASK_DEF_NAME = "arun-order-service"   // <--- Uncommented
         IMAGE_TAG = "${BUILD_NUMBER}"
         AWS_ACCOUNT_ID = "065109818578"
         ECR_URI = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}"
@@ -51,13 +51,13 @@ pipeline {
 
         stage('Register New Task Definition') {
             steps {
-                sh '''
+                sh """
                 aws ecs describe-task-definition \
-                  --task-definition $TASK_DEF_NAME \
+                  --task-definition ${TASK_DEF_NAME} \
                   --query taskDefinition > task-def.json
 
-                cat task-def.json | jq --arg IMAGE "$ECR_URI:$IMAGE_TAG" '
-                  .containerDefinitions[0].image = $IMAGE |
+                cat task-def.json | jq --arg IMAGE "${ECR_URI}:${IMAGE_TAG}" '
+                  .containerDefinitions[0].image = \$IMAGE |
                   del(
                     .taskDefinitionArn,
                     .revision,
@@ -70,10 +70,9 @@ pipeline {
 
                 aws ecs register-task-definition \
                   --cli-input-json file://new-task-def.json
-                '''
+                """
             }
         }
-
         stage('Deploy to ECS') {
             steps {
                 sh '''
