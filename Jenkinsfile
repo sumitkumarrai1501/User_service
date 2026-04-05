@@ -9,7 +9,7 @@ pipeline {
         // Ensure this matches your actual Task Definition name in AWS Console
         TASK_DEF_NAME  = "user-service" 
         IMAGE_TAG      = "${BUILD_NUMBER}"
-        AWS_ACCOUNT_ID = "515966537510"
+        AWS_ACCOUNT_ID = "065109818578"
         ECR_URI        = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}"
     }
 
